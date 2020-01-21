@@ -47,11 +47,18 @@ public class ParseState {
     // ParseState is an optional object for holding parse state. Though only a simple plain
     // object is required, ParseState provides convenience for viewing keys and values.
     //
-    public String key() {
+    public String key(boolean trimQuotes) {
         if (klim <= koff) {
             return null;
         }
-        return new String(src, koff + 1, klim - koff - 2);
+        if (trimQuotes) {
+            if (klim == koff + 1) {     // single quote
+                return null;
+            }
+            return new String(src, koff + 1, klim - koff - 2);
+        } else {
+            return new String(src, koff, klim - koff);
+        }
     }
     public String val() {
         if (vlim <= voff) {
@@ -117,7 +124,7 @@ public class ParseState {
     }
 
     public String tokstr (boolean detail) {
-        String keystr = key();
+        String keystr = key(false);
         keystr = keystr == null ? "" : "k" + (klim - koff) + '@' + koff + ':';
         String vlen = (vlim == voff || (Parser.CMAP[tok] & Parser.NO_LEN_TOKENS) != 0) ? "" : (vlim - voff) + "";
 
@@ -140,7 +147,7 @@ public class ParseState {
         jw.obj();
         jw.key("tokstr").val(tokstr());
         if (klim > koff) {
-            jw.key("key").val(key());
+            jw.key("key").val(key(false));
         }
         jw.key("val").val(val());
         jw.key("line").val(line);

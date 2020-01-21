@@ -70,7 +70,7 @@ public class ParserTest {
     };
 
     @Test
-    public void lineAndLineOff () {
+    public void testLineAndLineOff () {
         table(
             a( "src",                              "next_src",  "exp" ),
             a( "12,",                              "13",        a( 1, 6 ) ),
@@ -110,13 +110,140 @@ public class ParserTest {
         );
     };
 
+    @Test
+    public void testObjectNoSpaces () {
+        table(
+            a( "src",                "exp" ),
+            a( "",                   "!@0:A_BF" ),
+            a( "{",                  "{@0,!@1:O_BF:{" ),
+            a( "{\"",                "{@0,k1@1:!@2:T:O_BF:{" ),
+            a( "{\"a",               "{@0,k2@1:!@3:T:O_BF:{" ),
+            a( "{\"a\"",             "{@0,k3@1:!@4:K:O_AK:{" ),
+            a( "{\"a\":",            "{@0,k3@1:!@5:K:O_BV:{" ),
+            a( "{\"a\":7",           "{@0,k3@1:!1@5:D:O_BV:{" ),
+            a( "{\"a\":71",          "{@0,k3@1:!2@5:D:O_BV:{" ),
+            a( "{\"a\":71,",         "{@0,k3@1:d2@5,!@8:O_BK:{" ),
+            a( "{\"a\":71,\"",       "{@0,k3@1:d2@5,k1@8:!@9:T:O_BK:{" ),
+            a( "{\"a\":71,\"b",      "{@0,k3@1:d2@5,k2@8:!@10:T:O_BK:{" ),
+            a( "{\"a\":71,\"b\"",    "{@0,k3@1:d2@5,k3@8:!@11:K:O_AK:{" ),
+            a( "{\"a\":71,\"b\":",   "{@0,k3@1:d2@5,k3@8:!@12:K:O_BV:{" ),
+            a( "{\"a\":71,\"b\":2",  "{@0,k3@1:d2@5,k3@8:!1@12:D:O_BV:{" ),
+            a( "{\"a\":71,\"b\":2}", "{@0,k3@1:d2@5,k3@8:d1@12,}@13,!@14:A_AV" )
+        ).test("object - no spaces",
+            (r) -> srctokens(r.str("src"))
+        );
+    };
+
+    @Test
+    public void testArrayNoSpaces () {
+        table(
+            a( "src",          "exp" ),
+            a( "",             "!@0:A_BF" ),
+            a( "[",            "[@0,!@1:A_BF:[" ),
+            a( "[8",           "[@0,!1@1:D:A_BF:[" ),
+            a( "[83",          "[@0,!2@1:D:A_BF:[" ),
+            a( "[83 ",         "[@0,d2@1,!@4:A_AV:[" ),
+            a( "[83,",         "[@0,d2@1,!@4:A_BV:[" ),
+            a( "[83,\"",       "[@0,d2@1,!1@4:T:A_BV:[" ),
+            a( "[83,\"a",      "[@0,d2@1,!2@4:T:A_BV:[" ),
+            a( "[83,\"a\"",    "[@0,d2@1,s3@4,!@7:A_AV:[" ),
+            a( "[83,\"a\",",   "[@0,d2@1,s3@4,!@8:A_BV:[" ),
+            a( "[83,\"a\",2",  "[@0,d2@1,s3@4,!1@8:D:A_BV:[" ),
+            a( "[83,\"a\",2]", "[@0,d2@1,s3@4,d1@8,]@9,!@10:A_AV" )
+        ).test("array - no spaces",
+            (r) -> srctokens(r.str("src"))
+        );
+    };
+
+    @Test
+    public void testArrayWithSpaces () {
+        table(
+            a( "src",               "exp" ),
+            a( "",                  "!@0:A_BF" ),
+            a( "[",                 "[@0,!@1:A_BF:[" ),
+            a( "[ ",                "[@0,!@2:A_BF:[" ),
+            a( "[ 8",               "[@0,!1@2:D:A_BF:[" ),
+            a( "[ 83",              "[@0,!2@2:D:A_BF:[" ),
+            a( "[ 83,",             "[@0,d2@2,!@5:A_BV:[" ),
+            a( "[ 83, ",            "[@0,d2@2,!@6:A_BV:[" ),
+            a( "[ 83, \"",          "[@0,d2@2,!1@6:T:A_BV:[" ),
+            a( "[ 83, \"a",         "[@0,d2@2,!2@6:T:A_BV:[" ),
+            a( "[ 83, \"a\"",       "[@0,d2@2,s3@6,!@9:A_AV:[" ),
+            a( "[ 83, \"a\" ",      "[@0,d2@2,s3@6,!@10:A_AV:[" ),
+            a( "[ 83, \"a\" ,",     "[@0,d2@2,s3@6,!@11:A_BV:[" ),
+            a( "[ 83, \"a\" , ",    "[@0,d2@2,s3@6,!@12:A_BV:[" ),
+            a( "[ 83, \"a\" , 2",   "[@0,d2@2,s3@6,!1@12:D:A_BV:[" ),
+            a( "[ 83, \"a\" , 2 ",  "[@0,d2@2,s3@6,d1@12,!@14:A_AV:[" ),
+            a( "[ 83, \"a\" , 2 ]", "[@0,d2@2,s3@6,d1@12,]@14,!@15:A_AV" )
+        ).test("array - with spaces",
+            (r) -> srctokens(r.str("src"))
+        );
+    };
+
+    @Test
+    public void testObjectWithSpaces () {
+        table(
+            a( "src",                "exp" ),
+            a( " ",                  "!@1:A_BF" ),
+            a( " {",                 "{@1,!@2:O_BF:{" ),
+            a( " { ",                "{@1,!@3:O_BF:{" ),
+            a( " { \"",              "{@1,k1@3:!@4:T:O_BF:{" ),
+            a( " { \"a",             "{@1,k2@3:!@5:T:O_BF:{" ),
+            a( " { \"a\"",           "{@1,k3@3:!@6:K:O_AK:{" ),
+            a( " { \"a\":",          "{@1,k3@3:!@7:K:O_BV:{" ),
+            a( " { \"a\": ",         "{@1,k3@3:!@8:K:O_BV:{" ),
+            a( " { \"a\": \"",       "{@1,k3@3:!1@8:T:O_BV:{" ),
+            a( " { \"a\": \"x",      "{@1,k3@3:!2@8:T:O_BV:{" ),
+            a( " { \"a\": \"x\"",    "{@1,k3@3:s3@8,!@11:O_AV:{" ),
+            a( " { \"a\": \"x\" }",  "{@1,k3@3:s3@8,}@12,!@13:A_AV" ),
+            a( " { \"a\" ",          "{@1,k3@3:!@7:K:O_AK:{" ),
+            a( " { \"a\" :",         "{@1,k3@3:!@8:K:O_BV:{" ),
+            a( " { \"a\" : ",        "{@1,k3@3:!@9:K:O_BV:{" ),
+            a( " { \"a\" : \"",      "{@1,k3@3:!1@9:T:O_BV:{" ),
+            a( " { \"a\" : \"x",     "{@1,k3@3:!2@9:T:O_BV:{" ),
+            a( " { \"a\" : \"x\" ",  "{@1,k3@3:s3@9,!@13:O_AV:{" ),
+            a( " { \"a\" : \"x\" }", "{@1,k3@3:s3@9,}@13,!@14:A_AV" )        ).test("object - with spaces",
+            (r) -> srctokens(r.str("src"))
+        );
+    };
+
+    @Test
+    public void testIncrementalArray () {
+        table(
+            a( "src1",                 "src2",                 "exp" ),
+            a( "",                     "1,[[[7,89.4],\"c\"]]", a( "!@0:A_BF", "d1@0,[@2,[@3,[@4,d1@5,d4@7,]@11,s3@13,]@16,]@17,!@18:A_AV" ) ),
+            a( "1,",                   "[[[7,89.4],\"c\"]]",   a( "d1@0,!@2:A_BV", "[@0,[@1,[@2,d1@3,d4@5,]@9,s3@11,]@14,]@15,!@16:A_AV" ) ),
+            a( "1,[",                  "[[7,89.4],\"c\"]]",    a( "d1@0,[@2,!@3:A_BF:[", "[@0,[@1,d1@2,d4@4,]@8,s3@10,]@13,]@14,!@15:A_AV" ) ),
+            a( "1,[[",                 "[7,89.4],\"c\"]]",     a( "d1@0,[@2,[@3,!@4:A_BF:[[", "[@0,d1@1,d4@3,]@7,s3@9,]@12,]@13,!@14:A_AV" ) ),
+            a( "1,[[[",                "7,89.4],\"c\"]]",      a( "d1@0,[@2,[@3,[@4,!@5:A_BF:[[[", "d1@0,d4@2,]@6,s3@8,]@11,]@12,!@13:A_AV" ) ),
+            a( "1,[[[7,",              "89.4],\"c\"]]",        a( "d1@0,[@2,[@3,[@4,d1@5,!@7:A_BV:[[[", "d4@0,]@4,s3@6,]@9,]@10,!@11:A_AV" ) ),
+            a( "1,[[[7,89.4]",         ",\"c\"]]",             a( "d1@0,[@2,[@3,[@4,d1@5,d4@7,]@11,!@12:A_AV:[[", "s3@1,]@4,]@5,!@6:A_AV" ) ),
+            a( "1,[[[7,89.4],",        "\"c\"]]",              a( "d1@0,[@2,[@3,[@4,d1@5,d4@7,]@11,!@13:A_BV:[[", "s3@0,]@3,]@4,!@5:A_AV" ) ),
+            a( "1,[[[7,89.4],\"c\"",   "]]",                   a( "d1@0,[@2,[@3,[@4,d1@5,d4@7,]@11,s3@13,!@16:A_AV:[[", "]@0,]@1,!@2:A_AV" ) ),
+            a( "1,[[[7,89.4],\"c\"]",  "]",                    a( "d1@0,[@2,[@3,[@4,d1@5,d4@7,]@11,s3@13,]@16,!@17:A_AV:[", "]@0,!@1:A_AV" ) ),
+            a( "1,[[[7,89.4],\"c\"]]", "",                     a( "d1@0,[@2,[@3,[@4,d1@5,d4@7,]@11,s3@13,]@16,]@17,!@18:A_AV", "!@18:A_AV" ) )
+        ).test("incremental array",
+            (r) -> parse_split(r.str("src1"), r.str("src2"))
+        );
+    };
+
+    static String[] parse_split (String src1, String src2) {
+        String[] ret = new String[2];
+        var p = new Parser(src1.getBytes());
+        ret[0] = srctokens(p);
+        p.ps.next_src = src2.getBytes();
+        ret[1] = srctokens(p);
+        return ret;
+    }
+
     static String srctokens (String src) {
-        return srctokens(src, src.getBytes().length);
+        return srctokens(new Parser(src.getBytes(), 0, src.getBytes().length));
     }
     static String srctokens (String src, int lim) {
-        Parser.Options opt = new Parser.Options();
-        opt.ehandler = (e) -> {};
-        Parser p = new Parser(src.getBytes(), 0, lim, opt);
+        return srctokens(new Parser(src.getBytes(), 0, lim));
+    }
+    static String srctokens (Parser p) {
+        p.opt.ehandler = (e) -> {};
         List<String> toks = new ArrayList<>();
         do {
             p.next();
