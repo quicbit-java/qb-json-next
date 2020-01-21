@@ -79,6 +79,7 @@ public class ParserTest {
         List<String> toks = new ArrayList<>();
         do {
             p.next();
+//            System.out.println(p.ps.toString());
             toks.add(p.ps.tokstr(p.ps.tok == 0));     // more detail for end token
         } while(p.ps.tok != 0);
         String lasttok = toks.get(toks.size() - 1);

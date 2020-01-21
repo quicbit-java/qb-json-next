@@ -281,8 +281,8 @@ public class Parser {
         return end_src(ps, opt);
     }
 
-    static <T> T pop (List<T> list) { int len = list.size(); return len == 0 ? null : list.remove(len - 1); }
-    static <T> T last (List<T> list) { int len = list.size(); return len == 0 ? null : list.get(len - 1); }
+    static Integer pop (List<Integer> list) { int len = list.size(); return len == 0 ? 0 : list.remove(len - 1); }
+    static Integer last (List<Integer> list) { int len = list.size(); return len == 0 ? 0 : list.get(len - 1); }
 
     int handle_unexp (ParseState ps, Options opt) {
         if (ps.vlim < 0) { ps.vlim = -ps.vlim; }

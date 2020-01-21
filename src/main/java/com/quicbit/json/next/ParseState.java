@@ -53,6 +53,12 @@ public class ParseState {
         }
         return new String(src, koff + 1, klim - koff - 2);
     }
+    public String val() {
+        if (vlim <= voff) {
+            return null;
+        }
+        return new String (src, voff, vlim - voff);
+    }
     public String sval() {
         if (vlim <= voff) {
             return null;
@@ -133,8 +139,10 @@ public class ParseState {
         JsonWriter jw = new JsonWriter();
         jw.obj();
         jw.key("tokstr").val(tokstr());
-        jw.key("key").val(key());
-        jw.key("val").val(sval());
+        if (klim > koff) {
+            jw.key("key").val(key());
+        }
+        jw.key("val").val(val());
         jw.key("line").val(line);
         jw.key("col").val(this.soff + this.vlim - this.lineoff);
         jw.key("pos").val(pos);
