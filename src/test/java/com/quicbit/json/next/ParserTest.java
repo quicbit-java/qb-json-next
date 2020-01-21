@@ -9,7 +9,7 @@ import static com.quicbit.json.next.TestKit.*;
 
 public class ParserTest {
     @Test
-    public void testRegex() {
+    public void testWithLimit() {
         table(
             a( "src",                                    "lim", "exp" ),
             a( "\"x\", 4\n, null, 3.2e5 , true, false,", 0,     "!@0:A_BF" ),
@@ -29,22 +29,62 @@ public class ParserTest {
             a( "\"x\", 4\n, null, 3.2e5 , true, false,", 30,    "s3@0,d1@5,n@9,d5@15,t@23,!1@29:T:A_BV" ),
             a( "\"x\", 4\n, null, 3.2e5 , true, false,", 35,    "s3@0,d1@5,n@9,d5@15,t@23,f@29,!@35:A_BV" ),
             a( "\"x\", 4\n, null, 3.2e5 , true, false,!", 50,    "s3@0,d1@5,n@9,d5@15,t@23,f@29,!@35:B:A_BV" )
-        ).test("regex(s)",
-            (r) -> {
-                Parser.Options opt = new Parser.Options();
-                opt.ehandler = (e) -> {};
-                Parser p = new Parser(r.str("src").getBytes(), 0, r.ival("lim"), opt);
-                List<String> toks = new ArrayList<>();
-                do {
-                    p.next();
-                    toks.add(p.ps.tokstr(p.ps.tok == 0));     // more detail for end token
-                } while(p.ps.tok != 0);
-                String lasttok = toks.get(toks.size() - 1);
-                if (!p.ps.tokstr(true).equals(lasttok)) {
-                    throw new RuntimeException("inconsistent last token: " + toks.get(toks.size()-1));
-                }
-                return String.join(",", toks);
-            }
+        ).test("with limit",
+            (r) -> srctokens(r.str("src"), r.ival("lim"))
         );
+    }
+
+    @Test
+    public void testVarious () {
+        table(
+            a("src", "exp"),
+            a("", "!@0:A_BF"),
+            a("1", "!1@0:D:A_BF"),
+            a("1,2,3", "d1@0,d1@2,!1@4:D:A_BV"),
+            a("[1, 2], 3", "[@0,d1@1,d1@4,]@5,!1@8:D:A_BV"),
+            a("\"x\"", "s3@0,!@3:A_AV"),
+            a("-3.05", "!5@0:D:A_BF"),
+            a("\b  true", "t@3,!@7:A_AV"),
+            a("  true", "t@2,!@6:A_AV"),
+            a("false", "f@0,!@5:A_AV"),
+            a(" false  ", "f@1,!@8:A_AV"),
+            a(" false   ", "f@1,!@9:A_AV"),
+            a("[1, 2, 3]", "[@0,d1@1,d1@4,d1@7,]@8,!@9:A_AV"),
+            a("[3.05E-2]", "[@0,d7@1,]@8,!@9:A_AV"),
+            a("[3.05E-2]", "[@0,d7@1,]@8,!@9:A_AV"),
+            a("{\"a\":1}", "{@0,k3@1:d1@5,}@6,!@7:A_AV"),
+            a("{\"a\":1,\"b\":{}}", "{@0,k3@1:d1@5,k3@7:{@11,}@12,}@13,!@14:A_AV"),
+            a("{\"a\"  :1}", "{@0,k3@1:d1@7,}@8,!@9:A_AV"),
+            a("{ \"a\" : 1 }", "{@0,k3@2:d1@8,}@10,!@11:A_AV"),
+            a("\"\\\"\"", "s4@0,!@4:A_AV"),
+            a("\"\\\\\"", "s4@0,!@4:A_AV"),
+            a("\t\t\"x\\a\r\"  ", "s6@2,!@10:A_AV"),
+            a("\"\\\"x\\\"a\r\\\"\"", "s11@0,!@11:A_AV"),
+            a(" [0,1,2]", "[@1,d1@2,d1@4,d1@6,]@7,!@8:A_AV"),
+            a("[\"a\", \"bb\"] ", "[@0,s3@1,s4@6,]@10,!@12:A_AV"),
+            a("\"x\", 4\n, null, 3.2e5 , true, false", "s3@0,d1@5,n@9,d5@15,t@23,f@29,!@34:A_AV"),
+            a("[\"a\",1.3,\n\t{ \"b\" : [\"v\", \"w\"]\n}\t\n ]", "[@0,s3@1,d3@5,{@11,k3@13:[@19,s3@20,s3@25,]@28,}@30,]@34,!@35:A_AV")
+        ).test("various",
+            (r) -> srctokens(r.str("src"))
+        );
+    };
+
+    static String srctokens (String src) {
+        return srctokens(src, src.getBytes().length);
+    }
+    static String srctokens (String src, int lim) {
+        Parser.Options opt = new Parser.Options();
+        opt.ehandler = (e) -> {};
+        Parser p = new Parser(src.getBytes(), 0, lim, opt);
+        List<String> toks = new ArrayList<>();
+        do {
+            p.next();
+            toks.add(p.ps.tokstr(p.ps.tok == 0));     // more detail for end token
+        } while(p.ps.tok != 0);
+        String lasttok = toks.get(toks.size() - 1);
+        if (!p.ps.tokstr(true).equals(lasttok)) {
+            throw new RuntimeException("inconsistent last token: " + toks.get(toks.size()-1));
+        }
+        return String.join(",", toks);
     }
 }
