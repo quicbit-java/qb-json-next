@@ -165,8 +165,9 @@ public class TestKit {
         } else {
             ret = String.valueOf(obj);
         }
-        ret = "(" + ret.replaceAll("\n", " ") + ")";
-        return ret;
+        ret = ret.replaceAll("\\r", "");
+        ret = ret.replaceAll("\\n", " ");
+        return "(" + ret + ")";
     }
 
     public static Object[] arrayOf (Object a) {

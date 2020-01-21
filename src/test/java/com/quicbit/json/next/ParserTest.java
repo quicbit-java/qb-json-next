@@ -69,6 +69,47 @@ public class ParserTest {
         );
     };
 
+    @Test
+    public void lineAndLineOff () {
+        table(
+            a( "src",                              "next_src",  "exp" ),
+            a( "12,",                              "13",        a( 1, 6 ) ),
+            a( "12,13",                            "",          a( 1, 6 ) ),
+            a( "\n\n12,",                          "13",        a( 3, 6 ) ),
+            a( "\n",                               "\n12,13",   a( 3, 6 ) ),
+            a( "\n\r",                             "\n\r12,13", a( 3, 6 ) ),
+            a( "\n\n12,13",                        "",          a( 3, 6 ) ),
+            a( "\n\r\n\r12,13",                    "",          a( 3, 6 ) ),
+            a( "\n\r\n",                           "\r12,13",   a( 3, 6 ) ),
+            a( "\n12,\n13\n",                      "",          a( 4, 1 ) ),
+            a( " \n\n12,13\n",                     "",          a( 4, 1 ) ),
+            a( "12,\n13",                          "",          a( 2, 3 ) ),
+            a( "\n12,",                            "13",        a( 2, 6 ) ),
+            a( "\n12,13",                          "",          a( 2, 6 ) ),
+            a( "\n\r\n\r",                         "12,13",     a( 3, 6 ) ),
+            a( "\n\r\n\r12,",                      "13",        a( 3, 6 ) ),
+            a( "{\"a\": 45, \"b\": true}",         "",          a( 1, 21 ) ),
+            a( "\n{\"a\": 45, \"b\": true}",       "",          a( 2, 21 ) ),
+            a( "{\"a\":\n 45, \"b\": true}",       "",          a( 2, 16 ) ),
+            a( "{\"a\": 45, \"b\":\n true}",       "",          a( 2, 7 ) ),
+            a( "\n{\"a\": 45, \"b\":\n true}",     "",          a( 3, 7 ) ),
+            a( "\n\n{\"a\":\n 45, \"b\":\n true}", "",          a( 5, 7 ) )
+        ).test("line and line off",
+            (r) -> {
+                byte[] src = r.str("src").getBytes();
+                Parser p = new Parser(src);
+                do { p.next(); } while (p.ps.tok != 0);
+                p.ps.next_src = r.str("next_src").getBytes();
+                do { p.next(); } while (p.ps.tok != 0);
+                int[] ret = new int[2];
+
+                ret[0] = p.ps.line;
+                ret[1] = p.ps.soff + p.ps.vlim - p.ps.lineoff + 1;
+                return ret;
+            }
+        );
+    };
+
     static String srctokens (String src) {
         return srctokens(src, src.getBytes().length);
     }
