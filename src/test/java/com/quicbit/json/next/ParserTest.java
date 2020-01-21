@@ -291,6 +291,52 @@ public class ParserTest {
         );
     };
 
+    @Test
+    public void testBadValue () {
+        table(
+            a( "src",          "exp" ),
+            a( "{\"a\"q",      "{@0,k3@1:!@4:B:O_AK:{" ),
+            a( "{\"a\":q",     "{@0,k3@1:!@5:B:O_BV:{" ),
+            a( "{\"a\": q",    "{@0,k3@1:!@6:B:O_BV:{" ),
+            a( "{\"a\" :  q",  "{@0,k3@1:!@8:B:O_BV:{" ),
+            a( "0*",           "!2@0:B:A_BF" ),
+            a( "1, 2.4n",      "d1@0,!4@3:B:A_BV" ),
+            a( "{\"a\": 3^6}", "{@0,k3@1:!2@6:B:O_BV:{" ),
+            a( " 1f",          "!2@1:B:A_BF" ),
+            a( "{\"a\": t,",   "{@0,k3@1:!2@6:B:O_BV:{" )
+        ).test("bad value",
+            (r) -> srctokens(r.str("src"))
+        );
+    };
+
+    @Test
+    public void testUnexpectedValue () {
+        table(
+            a( "src",                  "exp" ),
+            a( "\"a\"\"b\"",           "s3@0,!3@3:U:A_AV" ),
+            a( "{\"a\"]",              "{@0,k3@1:!1@4:U:O_AK:{" ),
+            a( "{\"a\"\"b\"}",         "{@0,k3@1:!3@4:U:O_AK:{" ),
+            a( "{\"a\": \"b\"]",       "{@0,k3@1:s3@6,!1@9:U:O_AV:{" ),
+            a( "[\"a\", \"b\"}",       "[@0,s3@1,s3@6,!1@9:U:A_AV:[" ),
+            a( "0{",                   "d1@0,!1@1:U:A_AV" ),
+            a( "{\"a\"::",             "{@0,k3@1:!1@5:U:O_BV:{" ),
+            a( "{ false:",             "{@0,!5@2:U:O_BF:{" ),
+            a( "{ fal",                "{@0,!3@2:U:O_BF:{" ),
+            a( "{ fal:",               "{@0,!3@2:U:O_BF:{" ),
+            a( "{\"a\": \"b\", 3: 4}", "{@0,k3@1:s3@6,!1@11:U:O_BK:{" ),
+            a( "{ \"a\"]",             "{@0,k3@2:!1@5:U:O_AK:{" ),
+            a( "{ \"a\" ]",            "{@0,k3@2:!1@6:U:O_AK:{" ),
+            a( "{ \"a\":]",            "{@0,k3@2:!1@6:U:O_BV:{" ),
+            a( "{ \"a\": ]",           "{@0,k3@2:!1@7:U:O_BV:{" ),
+            a( "{ 2.4",                "{@0,!3@2:U:O_BF:{" ),
+            a( "[ 1, 2 ] \"c",         "[@0,d1@2,d1@5,]@7,!2@9:U:A_AV" ),
+            a( "[ 1, 2 ] \"c\"",       "[@0,d1@2,d1@5,]@7,!3@9:U:A_AV" )
+        ).test("unexpected value",
+            (r) -> srctokens(r.str("src"))
+        );
+    };
+
+
 
     static String[] parse_split (String src1, String src2) {
         String[] ret = new String[2];
