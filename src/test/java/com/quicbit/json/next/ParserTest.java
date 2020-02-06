@@ -4,7 +4,9 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
 
 import static com.quicbit.json.next.TestKit.*;
 
@@ -387,6 +389,49 @@ public class ParserTest {
                     voffs[i] = p.ps.vcount;
                 }
                 return a(soffs, voffs);
+            }
+        );
+    };
+
+    @Test
+    public void testStikyEcode () {
+        table(
+            a( "src",        "exp" ),
+            a( "",           ", !@0:A_BF, !@0:A_BF" ),
+            a( "1",          ", !1@0:D:A_BF, !1@0:D:A_BF" ),
+            a( "1,",         "d1@0:A_AV, !@2:A_BV, !@2:A_BV" ),
+            a( "1,2",        "d1@0:A_AV, !1@2:D:A_BV, !1@2:D:A_BV" ),
+            a( "[\"",        "[@0:A_BF:[, !1@1:T:A_BF:[, !1@1:T:A_BF:[" ),
+            a( "{\"",        "{@0:O_BF:{, k1@1:!@2:T:O_BF:{, k1@1:!@2:T:O_BF:{" ),
+            a( "[\"a",       "[@0:A_BF:[, !2@1:T:A_BF:[, !2@1:T:A_BF:[" ),
+            a( "{\"a",       "{@0:O_BF:{, k2@1:!@3:T:O_BF:{, k2@1:!@3:T:O_BF:{" ),
+            a( "{\"a\"",     "{@0:O_BF:{, k3@1:!@4:K:O_AK:{, k3@1:!@4:K:O_AK:{" ),
+            a( "{\"a\":",    "{@0:O_BF:{, k3@1:!@5:K:O_BV:{, k3@1:!@5:K:O_BV:{" ),
+            a( "{\"a\":\"",  "{@0:O_BF:{, k3@1:!1@5:T:O_BV:{, k3@1:!1@5:T:O_BV:{" ),
+            a( "{\"a\":\"b", "{@0:O_BF:{, k3@1:!2@5:T:O_BV:{, k3@1:!2@5:T:O_BV:{" ),
+            a( "{\"a\":n",   "{@0:O_BF:{, k3@1:!1@5:T:O_BV:{, k3@1:!1@5:T:O_BV:{" ),
+            a( "{\"a\":no",  "{@0:O_BF:{, k3@1:!2@5:B:O_BV:{, k3@1:!2@5:B:O_BV:{" ),
+            a( "{t",         "{@0:O_BF:{, !1@1:U:O_BF:{, !1@1:U:O_BF:{" ),
+            a( "{7",         "{@0:O_BF:{, !1@1:U:O_BF:{, !1@1:U:O_BF:{" ),
+            a( "[tx",        "[@0:A_BF:[, !2@1:B:A_BF:[, !2@1:B:A_BF:[" ),
+            a( "{tx",        "{@0:O_BF:{, !1@1:U:O_BF:{, !1@1:U:O_BF:{" )
+        ).test("sticky ecode",
+            (r) -> {
+
+                Parser p = new Parser(r.str("src").getBytes());
+                p.opt.ehandler = (e) -> {};
+                String last = "";
+                List<String> toks = new ArrayList<>();
+                while (p.next() != 0) {
+                    last = p.ps.tokstr(true);
+                }
+                toks.add(last);
+                toks.add(p.ps.tokstr(true));
+                p.next();
+                toks.add(p.ps.tokstr(true));
+                Assert.assertEquals("not sticky", toks.get(toks.size()-1), toks.get(toks.size()-2));
+
+                return join(toks.toArray(), ", ");
             }
         );
     };

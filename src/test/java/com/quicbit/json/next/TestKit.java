@@ -226,6 +226,17 @@ public class TestKit {
         }
         return ret;
     }
+
+    public static String join(Object[] a, String delim) {
+        StringBuilder sb = new StringBuilder();
+        for (int i=0; i<a.length-1; i++) {
+            sb.append(a[i]);
+            sb.append(delim);
+        }
+        sb.append(a[a.length-1]);
+        return sb.toString();
+    }
+
     public static Table table(Object[]... rows) { return new Table(new TestKit(), rows); }
     public static Object[] a (Object... a) { return a; }
     public static String[] sa (Object... a) { return Arrays.copyOf(a, a.length, String[].class); }
