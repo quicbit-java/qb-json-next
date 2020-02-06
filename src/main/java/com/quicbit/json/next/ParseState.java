@@ -40,7 +40,7 @@ public class ParseState {
     public ParseState(byte[] src, int off, int lim) {
         this.src = src;
         koff = klim = voff = vlim = soff = off;
-        this.lim = Math.min(lim, src.length);
+        this.lim = src == null ? 0 : Math.min(lim, src.length);
     }
 
     //

@@ -1,5 +1,6 @@
 package com.quicbit.json.next;
 
+import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.ArrayList;
@@ -336,11 +337,63 @@ public class ParserTest {
         );
     };
 
+    @Test
+    public void testNextErrors () {
+        table(
+            a( "s1", "s2",        "s3", "exp" ),
+            a( "[{", " true}",    "",   "unexpected token at 1..5" ),
+            a( "[",  "true, fax", "",   "bad value at 6..9" )
+        ).teste("next() errors",
+            (r) -> {
+                Object[] sources = a(r.str("s1"), r.str("s2"), r.str("s3"));
+                Parser p = new Parser();
+                for (Object src : sources) {
+                    p.ps.next_src = ((String) src).getBytes();
+                    while (p.next() != 0) {};
+                }
+                return null;
+            }
+        );
+    };
 
+    @Test
+    public void testSrcNotFinished () {
+        String s1 = "[1,2,3,4,";
+        String s2 = "5]";
+        Parser p = new Parser(s1.getBytes());
+        p.ps.next_src = s2.getBytes();
+        var exp = "[@0,d1@1,d1@3,d1@5,d1@7,d1@0,]@1,!@2:A_AV";
+        Assert.assertEquals(desc("src not finished", a(s1, s2), exp), srctokens(p), exp);
+    };
+
+    @Test
+    public void testSoffAndVcount () {
+        table(
+            a( "s1",            "s2",                "s3",      "exp" ),
+            a( "[1, ",          "2,3,",              "4]",      a(a(0, 4, 8), a(1, 3, 5) )),
+            a( "[ {\"a\": 7, ", "\"b\": [1,2,3] },", " true ]", a(a(0, 11, 26), a(1, 6, 8)))
+        ).test("soff and vcount",
+            (r) -> {
+                Object[] sources = a(r.str("s1"), r.str("s2"), r.str("s3"));
+                int[] soffs = new int[3];
+                int[] voffs = new int[3];
+                Parser p = new Parser();
+                for (int i=0; i<sources.length; i++) {
+                    Object src = sources[i];
+                    p.ps.next_src = ((String) src).getBytes();
+                    while (p.next() != 0) {};
+                    p.checke();
+                    soffs[i] = p.ps.soff;
+                    voffs[i] = p.ps.vcount;
+                }
+                return a(soffs, voffs);
+            }
+        );
+    };
 
     static String[] parse_split (String src1, String src2) {
         String[] ret = new String[2];
-        var p = new Parser(src1.getBytes());
+        Parser p = new Parser(src1.getBytes());
         ret[0] = srctokens(p);
         p.ps.next_src = src2.getBytes();
         ret[1] = srctokens(p);

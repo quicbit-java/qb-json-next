@@ -180,6 +180,7 @@ public class Parser {
     ParseState ps;
     Options opt;
 
+    public Parser () { this(null, 0, 0, null); }
     public Parser (byte[] src) { this(src, 0, src.length, null); }
     public Parser (byte[] src, int off, int lim) { this(src, off, lim, null); }
     public Parser (byte[] src, int off, int lim, Options opt) {

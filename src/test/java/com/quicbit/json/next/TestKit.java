@@ -5,6 +5,7 @@ import org.junit.Assert;
 import java.io.PrintStream;
 import java.lang.reflect.Array;
 import java.util.*;
+import java.util.regex.Pattern;
 
 public class TestKit {
     PrintStream out = System.out;
@@ -18,6 +19,7 @@ public class TestKit {
 
     static class Options {
         int max_tests = 0;
+        String assertion = "same";      // "none", "same", "contains" or "throws"
     }
 
     static class Row {
@@ -117,8 +119,12 @@ public class TestKit {
         public void test (String name, RowFn fn) {
             _test(name, fn, new Options());
         }
+        public void teste (String name, RowFn fn) { Options opt = new Options(); opt.assertion = "throws"; _test(name, fn, opt); }
 
         public void _test(String name, RowFn fn, Options opt) {
+            if (opt.assertion.equals("none")) {
+                return;
+            }
             context.out.println("# " + name);
             boolean ok = true;
             int rlim = rows.length;
@@ -128,33 +134,62 @@ public class TestKit {
             for (int ri=0; ri < rlim; ri++) {
                 context.num_tests++;
                 Row row = rows[ri];
-                Object actual = fn.apply(row);
-                Object expected = row.expected();
-                String msg = format(row.inputs()) + " -expect-> " + format(actual);
+                // test
+                Object actual = null;
+                String assertion = opt.assertion;
+                if (assertion.equals("throws")) {
+                    try {
+                        fn.apply(row);
+                    } catch (Exception e) {
+                        actual = e.getMessage();
+                    }
+                } else {
+                    actual = fn.apply(row);
+                }
+                String msg = format(row.inputs()) + " -expect-> " + format(row.expected());
                 try {
+                    Object expected = row.expected();
                     if (expected != null && expected.getClass().isArray()) {
                         Object[] reta = arrayOf(actual);
                         Object[] expa = arrayOf(expected);
                         Assert.assertArrayEquals(expa, reta);
                     } else {
-                        Assert.assertEquals(expected, actual);
+                        switch (assertion) {
+                            case "throws":
+                                if (actual == null) {
+                                    Assert.fail("Expected throw, but no error was thrown");
+                                } else if (!String.valueOf(actual).contains(String.valueOf(expected))) {
+                                    Assert.fail("Error did not contain expected string: \"" + expected + "\"");
+                                }
+                                break;
+                            case "same":
+                                Assert.assertEquals(expected, actual);
+                                break;
+                            default:
+                                Assert.fail("unknown assertion type: " + assertion);
+                        }
                     }
                     context.num_ok++;
                     context.out.println("ok " + context.num_tests + " : " + msg);
-                } catch (Exception e) {
+                } catch (Throwable e) {
                     ok = false;
                     context.out.println("not ok " + context.num_tests + " : " + msg);
                     context.out.println("  ---");
-                    context.out.println("    expected: " + format(expected));
+                    context.out.println("    expected: " + format(row.expected()));
                     context.out.println("    actual:   " + format(actual));
                     context.out.println("    " + e.getMessage());
                     e.printStackTrace(context.out);
+                    context.out.println();
                 }
             }
             if (!ok) {
                 throw new AssertionError("one or more assertion failures");
             }
         }
+    }
+
+    public static String desc (String msg, Object[] input, Object expected) {
+        return msg + " " + format(input) + " -expect-> " + format(expected);
     }
 
     // format() was copied from org.junit.Assert to replicate look and feel of assertion messages
@@ -179,6 +214,18 @@ public class TestKit {
         return ret;
     }
 
+    public static class JSObj extends LinkedHashMap<String,Object> {
+    }
+    public static JSObj o (Object... kv) {
+        if (kv.length % 2 != 0) {
+            throw new IllegalArgumentException("uneven key/value set");
+        }
+        JSObj ret = new JSObj();
+        for (int i=0; i<kv.length; i+=2) {
+            ret.put((String)kv[i], kv[i+1]);
+        }
+        return ret;
+    }
     public static Table table(Object[]... rows) { return new Table(new TestKit(), rows); }
     public static Object[] a (Object... a) { return a; }
     public static String[] sa (Object... a) { return Arrays.copyOf(a, a.length, String[].class); }
