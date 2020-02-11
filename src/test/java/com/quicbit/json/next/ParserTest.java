@@ -394,7 +394,7 @@ public class ParserTest {
     };
 
     @Test
-    public void testStikyEcode () {
+    public void testStickyEcode () {
         table(
             a( "src",        "exp" ),
             a( "",           ", !@0:A_BF, !@0:A_BF" ),
@@ -435,6 +435,72 @@ public class ParserTest {
             }
         );
     };
+
+    @Test
+    public void testParseStateObject() {
+        table(
+            a( "src",            "opt", "prop_or_fn", "args",                      "exp" ),
+            a( "{\"num\":7 ",    null,  "toString",     a(),                       "{\"tokstr\":k5@1:d1@7,\"key\":\"num\",\"val\":7,\"line\":1,\"col\":8,\"pos\":O_AV}" ),
+            a( "{\"num\":7 ",    null,  "key",        a(true),                        "num" ),
+            a( "{\"num\":7 ",    null,  "key",        a(false),                        "\"num\"" ),
+            a( "{\"num\":7 ",    null,  "key_cmp",    a( "num".getBytes(), 0, 1 ), 1 ),
+            a( "{\"num\":7 ",    null,  "key_cmp",    a( "num".getBytes(), 0, 2 ), 1 ),
+            a( "{\"num\":7 ",    null,  "key_cmp",    a( "num".getBytes(), 0, 3 ), 0 ),
+            a( "{\"num\":7 ",    null,  "key_equal",  a( "num".getBytes(), 0, 3),       true ),
+            a( "{\"num\":7 ",    null,  "key_equal",  a( "numm".getBytes(), 0, 4),  false ),
+            a( "{\"num\":7 ",    null,  "val",        a(),                     7 ),
+            a( "{\"num\":7 ",    null,  "val_cmp",    a( "7".getBytes(), 0, 1 ),            0 ),
+            a( "{\"num\":7 ",    null,  "val_cmp",    a( "7".getBytes(), 1, 1 ),            1 ),
+            a( "{\"a\":[ ",      null,  "toString",     a(),                       "{\"tokstr\":k3@1:[@5,\"key\":\"a\",\"val\":[,\"line\":1,\"col\":6,\"pos\":A_BF}" ),
+            a( "{\"a\":[ ",      null,  "key",        a(true),                        "a" ),
+            a( "{\"a\":[ ",      null,  "val",        a(),                        "[" ),
+            a( "{\"a\":[3 ",     null,  "key",        a(true),                        null ),
+            a( "{\"a\":[3 ",     null,  "key",        a(false),                        null ),
+            a( "{\"a\":[3 ",     null,  "val",        a(),                        3 ),
+            a( "{\"a\":[3] ",    null,  "key",        a(true),                        null ),
+            a( "{\"a\":[3] ",    null,  "val",        a(),                        "]" ),
+            a( "{\"a\":[\"x\" ", null,  "val",        a(),                        "x" ),
+            a( "{\"a\":[\"x\" ", null,  "val_cmp",    a( "w".getBytes(), 0, 1 ),                 1 ),
+            a( "{\"a\":[\"x\" ", null,  "val_cmp",    a( "x".getBytes(), 0, 1 ),                 0 ),
+            a( "{\"a\":[\"x\" ", null,  "val_equal",  a( "x".getBytes(), 0, 1 ),                 true ),
+            a( "{\"a\":[\"x\" ", null,  "val_cmp",    a( "y".getBytes(), 0, 1 ),                 -1 ),
+            a( "{\"a\":[\"x\" ", null,  "val_equal",  a( "y".getBytes(), 0, 1 ),                 false ),
+            a( "{\"a\":4} ",     null,  "toString",     a(),                      "{\"tokstr\":}@6,\"val\":},\"line\":1,\"col\":7,\"pos\":A_AV}"),
+            a( "{\"a\":4} ",     null,  "toString",   a(),                         "{\"tokstr\":}@6,\"val\":},\"line\":1,\"col\":7,\"pos\":A_AV}" ),
+            a( "{\"a\":4.1 ",    null,  "val",        a(),                        4.1 ),
+            a( "{\"a\":4} ",     null,  "val",        a(),                        "}" ),
+            a( "{\"a\": true ",  null,  "val",        a(),                        true ),
+            a( "{\"a\": false ", null,  "val",        a(),                        false ),
+            a( "{\"a\": null ",  null,  "val",        a(),                        null ),
+//            "# pending/incomplete decimal",
+            a( "2",              null,  "val",        a(),                        null ),
+            a( "{\"a\":4}  ",    null,  "val",        a(),                        null )
+        ).test("",
+            (r) -> {
+                String src = r.str("src");
+                String prop_or_fn = r.str("prop_or_fn");
+                Object[] args = r.arr("args");
+                Parser p = parser(r.str("src"));
+                while (p.next() != 0 && p.ps.vlim < src.length() - 1) {}
+                Object ret;
+                if (args != null) {
+                    // function call
+                    ret = call(p.ps, prop_or_fn, args);
+                } else {
+                    // property
+                    ret = field(p.ps, prop_or_fn);
+                }
+                return ret;
+            }
+        );
+    }
+
+    // return a new parser with that silences errors (to allow token assertion on error state, etc)
+    static Parser parser (String src) {
+        Parser p = new Parser(src.getBytes());
+        p.opt.ehandler = (e) -> {};
+        return p;
+    }
 
     static String[] parse_split (String src1, String src2) {
         String[] ret = new String[2];

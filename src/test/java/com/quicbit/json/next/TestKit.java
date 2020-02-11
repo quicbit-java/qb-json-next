@@ -5,6 +5,7 @@ import org.junit.Assert;
 import java.io.PrintStream;
 import java.lang.reflect.Array;
 import java.util.*;
+import java.lang.reflect.*;
 import java.util.regex.Pattern;
 
 public class TestKit {
@@ -56,7 +57,11 @@ public class TestKit {
             return Arrays.copyOf(a, a.length, String[].class);
         }
 
-        public int[] intarr(String n) {
+        public Object[] arr (String n) {
+            return (Object[]) values[table.indexOf(n)];
+        }
+
+        public int[] intarr (String n) {
             Object[] a = (Object[]) values[table.indexOf(n)];
             int[] ret = new int[a.length];
             for (var i=0; i<a.length; i++) {
@@ -235,6 +240,30 @@ public class TestKit {
         }
         sb.append(a[a.length-1]);
         return sb.toString();
+    }
+
+    // invoke a method on an object using the given arguments
+    public static Object call (Object obj, String method, Object[] args) {
+        Method[] methods = obj.getClass().getMethods();
+        for (Method m: methods) {
+            if (m.getName().equals(method) && m.getParameterCount() == args.length) {
+                try {
+                    return m.invoke(obj, args);
+                } catch (Exception e) {
+                    throw new RuntimeException(e);
+                }
+            }
+        }
+        throw new RuntimeException("method " + method + " with " + args.length + " parameters not found in class " + obj.getClass());
+    }
+
+    public static Object field (Object obj, String field) {
+        try {
+            Field f = obj.getClass().getField(field);
+            return f.get(obj);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
     }
 
     public static Table table(Object[]... rows) { return new Table(new TestKit(), rows); }

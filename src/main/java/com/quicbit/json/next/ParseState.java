@@ -4,6 +4,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import static com.quicbit.json.next.Parser.TRUNCATED;
+import static com.quicbit.json.next.Parser.TRUNC_DEC;
+
 //
 // ParseState functions are for convenience and are NOT highly optimized like the Parser.  ParseState methods
 // make working with raw buffers a bit simpler.  ParseState does not provide thorough checks on very
@@ -60,11 +63,30 @@ public class ParseState {
             return new String(src, koff, klim - koff);
         }
     }
-    public String val() {
+    public Object val() {
+        if (ecode == TRUNCATED || ecode == TRUNC_DEC) {
+            return null;
+        }
         if (vlim <= voff) {
             return null;
         }
-        return new String (src, voff, vlim - voff);
+        switch (tok) {
+            case TRU: return true;
+            case FAL: return false;
+            case NUL: return null;
+            case STR:
+                // return without quotes
+                return new String (src, voff + 1, vlim - voff - 2);
+            case DEC:
+                String s = new String (src, voff, vlim-voff);
+                if (s.contains(".")) {
+                    return Double.parseDouble(s);
+                } else {
+                    return Integer.parseInt(s);
+                }
+            default:
+                return new String (src, voff, vlim-voff);
+        }
     }
     public String sval() {
         if (vlim <= voff) {
@@ -93,7 +115,7 @@ public class ParseState {
     static int arr_cmp (byte[] a, int aoff, int alim, byte[] b, int boff, int blim) {
         var len_a = alim - aoff;
         var len_b = blim - boff;
-        var lim = aoff + (len_a < len_b ? len_a : len_b);
+        var lim = aoff + (Math.min(len_a, len_b));
         var adj = aoff - boff;
         while (aoff < lim) {
             if (a[aoff] != b[aoff - adj]) {
@@ -101,7 +123,7 @@ public class ParseState {
             }
             aoff++;
         }
-        return len_a == len_b ? 0 : len_a > len_b ? 1 : -1;
+        return Integer.compare(len_a, len_b);
     }
 
     public boolean key_equal (byte[] a, int off, int lim) {
@@ -152,7 +174,7 @@ public class ParseState {
         jw.key("val").val(val());
         jw.key("line").val(line);
         jw.key("col").val(this.soff + this.vlim - this.lineoff);
-        jw.key("pos").val(pos);
+        jw.key("pos").val(Parser.posname(pos));
         jw.objend();
         return jw.toString();
     }
