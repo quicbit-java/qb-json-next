@@ -180,10 +180,12 @@ public class Parser {
     ParseState ps;
     Options opt;
 
-    public Parser () { this(null, 0, 0, null); }
-    public Parser (byte[] src) { this(src, 0, src.length, null); }
-    public Parser (byte[] src, int off, int lim) { this(src, off, lim, null); }
-    public Parser (byte[] src, int off, int lim, Options opt) {
+    public static Parser parser () { return parser (null, 0, 0, null); }
+    public static Parser parser (byte[] src) { return parser(src, 0, src.length, null); }
+    public static Parser parser (byte[] src, int off, int lim) { return parser(src, off, lim, null); }
+    public static Parser parser (byte[] src, int off, int lim, Options opt) { return new Parser(src, off, lim, opt); }
+
+    private Parser (byte[] src, int off, int lim, Options opt) {
         this.ps = new ParseState(src, off, lim);
         this.opt = opt == null ? new Options() : opt;
     }

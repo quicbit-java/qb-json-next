@@ -31,7 +31,7 @@ public class ParserTest {
             a( "\"x\", 4\n, null, 3.2e5 , true, false,", 35,    "s3@0,d1@5,n@9,d5@15,t@23,f@29,!@35:A_BV" ),
             a( "\"x\", 4\n, null, 3.2e5 , true, false,!", 50,    "s3@0,d1@5,n@9,d5@15,t@23,f@29,!@35:B:A_BV" )
         ).test("with limit",
-            (r) -> srctokens(r.str("src"), r.ival("lim"))
+            (r) -> srctokens(parser(r.str("src"), 0, r.ival("lim")))
         );
     }
 
@@ -66,9 +66,9 @@ public class ParserTest {
             a("\"x\", 4\n, null, 3.2e5 , true, false", "s3@0,d1@5,n@9,d5@15,t@23,f@29,!@34:A_AV"),
             a("[\"a\",1.3,\n\t{ \"b\" : [\"v\", \"w\"]\n}\t\n ]", "[@0,s3@1,d3@5,{@11,k3@13:[@19,s3@20,s3@25,]@28,}@30,]@34,!@35:A_AV")
         ).test("various",
-            (r) -> srctokens(r.str("src"))
+            (r) -> srctokens(parser(r.str("src")))
         );
-    };
+    }
 
     @Test
     public void testLineAndLineOff () {
@@ -97,8 +97,7 @@ public class ParserTest {
             a( "\n\n{\"a\":\n 45, \"b\":\n true}", "",          a( 5, 7 ) )
         ).test("line and line off",
             (r) -> {
-                byte[] src = r.str("src").getBytes();
-                Parser p = new Parser(src);
+                Parser p = parser(r.str("src"));
                 do { p.next(); } while (p.ps.tok != 0);
                 p.ps.next_src = r.str("next_src").getBytes();
                 do { p.next(); } while (p.ps.tok != 0);
@@ -109,7 +108,7 @@ public class ParserTest {
                 return ret;
             }
         );
-    };
+    }
 
     @Test
     public void testObjectNoSpaces () {
@@ -131,9 +130,9 @@ public class ParserTest {
             a( "{\"a\":71,\"b\":2",  "{@0,k3@1:d2@5,k3@8:!1@12:D:O_BV:{" ),
             a( "{\"a\":71,\"b\":2}", "{@0,k3@1:d2@5,k3@8:d1@12,}@13,!@14:A_AV" )
         ).test("object - no spaces",
-            (r) -> srctokens(r.str("src"))
+            (r) -> srctokens(parser(r.str("src")))
         );
-    };
+    }
 
     @Test
     public void testArrayNoSpaces () {
@@ -152,9 +151,9 @@ public class ParserTest {
             a( "[83,\"a\",2",  "[@0,d2@1,s3@4,!1@8:D:A_BV:[" ),
             a( "[83,\"a\",2]", "[@0,d2@1,s3@4,d1@8,]@9,!@10:A_AV" )
         ).test("array - no spaces",
-            (r) -> srctokens(r.str("src"))
+            (r) -> srctokens(parser(r.str("src")))
         );
-    };
+    }
 
     @Test
     public void testArrayWithSpaces () {
@@ -177,9 +176,9 @@ public class ParserTest {
             a( "[ 83, \"a\" , 2 ",  "[@0,d2@2,s3@6,d1@12,!@14:A_AV:[" ),
             a( "[ 83, \"a\" , 2 ]", "[@0,d2@2,s3@6,d1@12,]@14,!@15:A_AV" )
         ).test("array - with spaces",
-            (r) -> srctokens(r.str("src"))
+            (r) -> srctokens(parser(r.str("src")))
         );
-    };
+    }
 
     @Test
     public void testObjectWithSpaces () {
@@ -204,9 +203,9 @@ public class ParserTest {
             a( " { \"a\" : \"x",     "{@1,k3@3:!2@9:T:O_BV:{" ),
             a( " { \"a\" : \"x\" ",  "{@1,k3@3:s3@9,!@13:O_AV:{" ),
             a( " { \"a\" : \"x\" }", "{@1,k3@3:s3@9,}@13,!@14:A_AV" )        ).test("object - with spaces",
-            (r) -> srctokens(r.str("src"))
+            (r) -> srctokens(parser(r.str("src")))
         );
-    };
+    }
 
     @Test
     public void testIncrementalArray () {
@@ -226,7 +225,7 @@ public class ParserTest {
         ).test("incremental array",
             (r) -> parse_split(r.str("src1"), r.str("src2"))
         );
-    };
+    }
 
     @Test
     public void testIncrementalArraySpaces () {
@@ -255,7 +254,7 @@ public class ParserTest {
         ).test("incremental array - spaces",
             (r) -> parse_split(r.str("src1"), r.str("src2"))
         );
-    };
+    }
 
     @Test
     public void testIncrementalObject () {
@@ -271,7 +270,7 @@ public class ParserTest {
         ).test("incremental object",
             (r) -> parse_split(r.str("src1"), r.str("src2"))
         );
-    };
+    }
 
     @Test
     public void testIncomplete () {
@@ -288,9 +287,9 @@ public class ParserTest {
             a( "{\"a",        "{@0,k2@1:!@3:T:O_BF:{" ),
             a( "{\"a\": ",    "{@0,k3@1:!@6:K:O_BV:{" )
         ).test("incremental object - spaces",
-            (r) -> srctokens(r.str("src"))
+            (r) -> srctokens(parser(r.str("src")))
         );
-    };
+    }
 
     @Test
     public void testBadValue () {
@@ -306,9 +305,9 @@ public class ParserTest {
             a( " 1f",          "!2@1:B:A_BF" ),
             a( "{\"a\": t,",   "{@0,k3@1:!2@6:B:O_BV:{" )
         ).test("bad value",
-            (r) -> srctokens(r.str("src"))
+            (r) -> srctokens(parser(r.str("src")))
         );
-    };
+    }
 
     @Test
     public void testUnexpectedValue () {
@@ -333,9 +332,9 @@ public class ParserTest {
             a( "[ 1, 2 ] \"c",         "[@0,d1@2,d1@5,]@7,!2@9:U:A_AV" ),
             a( "[ 1, 2 ] \"c\"",       "[@0,d1@2,d1@5,]@7,!3@9:U:A_AV" )
         ).test("unexpected value",
-            (r) -> srctokens(r.str("src"))
+            (r) -> srctokens(parser(r.str("src")))
         );
-    };
+    }
 
     @Test
     public void testNextErrors () {
@@ -346,7 +345,7 @@ public class ParserTest {
         ).teste("next() errors",
             (r) -> {
                 Object[] sources = a(r.str("s1"), r.str("s2"), r.str("s3"));
-                Parser p = new Parser();
+                Parser p = Parser.parser();
                 for (Object src : sources) {
                     p.ps.next_src = ((String) src).getBytes();
                     while (p.next() != 0) {};
@@ -354,17 +353,17 @@ public class ParserTest {
                 return null;
             }
         );
-    };
+    }
 
     @Test
     public void testSrcNotFinished () {
         String s1 = "[1,2,3,4,";
         String s2 = "5]";
-        Parser p = new Parser(s1.getBytes());
+        Parser p = parser(s1);
         p.ps.next_src = s2.getBytes();
         var exp = "[@0,d1@1,d1@3,d1@5,d1@7,d1@0,]@1,!@2:A_AV";
         Assert.assertEquals(desc("src not finished", a(s1, s2), exp), srctokens(p), exp);
-    };
+    }
 
     @Test
     public void testSoffAndVcount () {
@@ -377,7 +376,7 @@ public class ParserTest {
                 Object[] sources = a(r.str("s1"), r.str("s2"), r.str("s3"));
                 int[] soffs = new int[3];
                 int[] voffs = new int[3];
-                Parser p = new Parser();
+                Parser p = Parser.parser();
                 for (int i=0; i<sources.length; i++) {
                     Object src = sources[i];
                     p.ps.next_src = ((String) src).getBytes();
@@ -389,7 +388,7 @@ public class ParserTest {
                 return a(soffs, voffs);
             }
         );
-    };
+    }
 
     @Test
     public void testStickyEcode () {
@@ -416,7 +415,7 @@ public class ParserTest {
         ).test("sticky ecode",
             (r) -> {
 
-                Parser p = new Parser(r.str("src").getBytes());
+                Parser p = parser(r.str("src"));
                 p.opt.ehandler = (e) -> {};
                 String last = "";
                 List<String> toks = new ArrayList<>();
@@ -432,7 +431,7 @@ public class ParserTest {
                 return join(toks.toArray(), ", ");
             }
         );
-    };
+    }
 
     @Test
     public void testParseStateObject() {
@@ -494,29 +493,23 @@ public class ParserTest {
     }
 
     // return a new parser with that silences errors (to allow token assertion on error state, etc)
-    static Parser parser (String src) {
-        Parser p = new Parser(src.getBytes());
+    static Parser parser (String src) { return parser(src, 0, src.getBytes().length); }
+    static Parser parser (String src, int off, int lim) {
+        Parser p = Parser.parser(src.getBytes(), off, lim);
         p.opt.ehandler = (e) -> {};
         return p;
     }
 
     static String[] parse_split (String src1, String src2) {
         String[] ret = new String[2];
-        Parser p = new Parser(src1.getBytes());
+        Parser p = parser(src1);
         ret[0] = srctokens(p);
         p.ps.next_src = src2.getBytes();
         ret[1] = srctokens(p);
         return ret;
     }
 
-    static String srctokens (String src) {
-        return srctokens(new Parser(src.getBytes(), 0, src.getBytes().length));
-    }
-    static String srctokens (String src, int lim) {
-        return srctokens(new Parser(src.getBytes(), 0, lim));
-    }
     static String srctokens (Parser p) {
-        p.opt.ehandler = (e) -> {};
         List<String> toks = new ArrayList<>();
         do {
             p.next();
