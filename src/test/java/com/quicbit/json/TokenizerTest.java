@@ -1,4 +1,4 @@
-package com.quicbit.json.next;
+package com.quicbit.json;
 
 import org.junit.Assert;
 import org.junit.Test;
@@ -6,9 +6,9 @@ import org.junit.Test;
 import java.util.ArrayList;
 import java.util.List;
 
-import static com.quicbit.json.next.TestKit.*;
+import static com.quicbit.testkit.TestKit.*;
 
-public class ParserTest {
+public class TokenizerTest {
     @Test
     public void testWithLimit() {
         table(
@@ -97,7 +97,7 @@ public class ParserTest {
             a( "\n\n{\"a\":\n 45, \"b\":\n true}", "",          a( 5, 7 ) )
         ).test("line and line off",
             (r) -> {
-                Parser p = parser(r.str("src"));
+                Tokenizer p = parser(r.str("src"));
                 do { p.next(); } while (p.ps.tok != 0);
                 p.ps.next_src = r.str("next_src").getBytes();
                 do { p.next(); } while (p.ps.tok != 0);
@@ -345,7 +345,7 @@ public class ParserTest {
         ).teste("next() errors",
             (r) -> {
                 Object[] sources = a(r.str("s1"), r.str("s2"), r.str("s3"));
-                Parser p = Parser.parser();
+                Tokenizer p = Tokenizer.parser();
                 for (Object src : sources) {
                     p.ps.next_src = ((String) src).getBytes();
                     while (p.next() != 0) {};
@@ -359,9 +359,9 @@ public class ParserTest {
     public void testSrcNotFinished () {
         String s1 = "[1,2,3,4,";
         String s2 = "5]";
-        Parser p = parser(s1);
+        Tokenizer p = parser(s1);
         p.ps.next_src = s2.getBytes();
-        var exp = "[@0,d1@1,d1@3,d1@5,d1@7,d1@0,]@1,!@2:A_AV";
+        String exp = "[@0,d1@1,d1@3,d1@5,d1@7,d1@0,]@1,!@2:A_AV";
         Assert.assertEquals(desc("src not finished", a(s1, s2), exp), srctokens(p), exp);
     }
 
@@ -376,7 +376,7 @@ public class ParserTest {
                 Object[] sources = a(r.str("s1"), r.str("s2"), r.str("s3"));
                 int[] soffs = new int[3];
                 int[] voffs = new int[3];
-                Parser p = Parser.parser();
+                Tokenizer p = Tokenizer.parser();
                 for (int i=0; i<sources.length; i++) {
                     Object src = sources[i];
                     p.ps.next_src = ((String) src).getBytes();
@@ -415,7 +415,7 @@ public class ParserTest {
         ).test("sticky ecode",
             (r) -> {
 
-                Parser p = parser(r.str("src"));
+                Tokenizer p = parser(r.str("src"));
                 p.opt.ehandler = (e) -> {};
                 String last = "";
                 List<String> toks = new ArrayList<>();
@@ -477,7 +477,7 @@ public class ParserTest {
                 String src = r.str("src");
                 String prop_or_fn = r.str("prop_or_fn");
                 Object[] args = r.arr("args");
-                Parser p = parser(r.str("src"));
+                Tokenizer p = parser(r.str("src"));
                 while (p.next() != 0 && p.ps.vlim < src.length() - 1) {}
                 Object ret;
                 if (args != null) {
@@ -493,23 +493,23 @@ public class ParserTest {
     }
 
     // return a new parser with that silences errors (to allow token assertion on error state, etc)
-    static Parser parser (String src) { return parser(src, 0, src.getBytes().length); }
-    static Parser parser (String src, int off, int lim) {
-        Parser p = Parser.parser(src.getBytes(), off, lim);
+    static Tokenizer parser (String src) { return parser(src, 0, src.getBytes().length); }
+    static Tokenizer parser (String src, int off, int lim) {
+        Tokenizer p = Tokenizer.parser(src.getBytes(), off, lim);
         p.opt.ehandler = (e) -> {};
         return p;
     }
 
     static String[] parse_split (String src1, String src2) {
         String[] ret = new String[2];
-        Parser p = parser(src1);
+        Tokenizer p = parser(src1);
         ret[0] = srctokens(p);
         p.ps.next_src = src2.getBytes();
         ret[1] = srctokens(p);
         return ret;
     }
 
-    static String srctokens (Parser p) {
+    static String srctokens (Tokenizer p) {
         List<String> toks = new ArrayList<>();
         do {
             p.next();

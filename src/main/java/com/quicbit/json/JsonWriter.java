@@ -1,4 +1,4 @@
-package com.quicbit.json.next;
+package com.quicbit.json;
 
 import java.util.ArrayList;
 import java.util.List;

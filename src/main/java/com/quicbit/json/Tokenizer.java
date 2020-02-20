@@ -14,14 +14,14 @@
 // ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 // OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
-package com.quicbit.json.next;
+package com.quicbit.json;
 
 import java.util.List;
 
 /**
  * This logic ported from the javascript version qb-json-next https://github.com/quicbit-js/qb-json-next/
  */
-public class Parser {
+public class Tokenizer {
     // values for ps.pos(ition).  LSB (0x7F) are reserved for token ascii value.
     static final int A_BF = 0x080;
     static final int A_BV = 0x100;   // in array, before value
@@ -127,7 +127,7 @@ public class Parser {
     //     i    the new index after all bytes are matched (past matched bytes)
     //    -i    (negative) the index of the first unmatched byte (past matched bytes)
     static int skip_bytes (byte[] src, int off, int lim, byte[] bsrc) {
-        var blen = bsrc.length;
+        int blen = bsrc.length;
         if (blen > lim - off) { blen = lim - off; }
         int i = 0;
         while (i < blen && bsrc[i] == src[i + off]) { i++; }       // reordered to (i < blen &&...)
@@ -161,7 +161,7 @@ public class Parser {
 
 
     // switch ps.src to ps.next_src if conditions are right (ps.src is null or is complete without errors)
-    static boolean next_src (ParseState ps) {
+    static boolean next_src (TokenizerState ps) {
        if (ps.ecode != 0 || (ps.src != null && ps.vlim < ps.lim)) {
           return false;
        }
@@ -177,16 +177,16 @@ public class Parser {
        return true;
     }
 
-    ParseState ps;
+    TokenizerState ps;
     Options opt;
 
-    public static Parser parser () { return parser (null, 0, 0, null); }
-    public static Parser parser (byte[] src) { return parser(src, 0, src.length, null); }
-    public static Parser parser (byte[] src, int off, int lim) { return parser(src, off, lim, null); }
-    public static Parser parser (byte[] src, int off, int lim, Options opt) { return new Parser(src, off, lim, opt); }
+    public static Tokenizer parser () { return parser (null, 0, 0, null); }
+    public static Tokenizer parser (byte[] src) { return parser(src, 0, src.length, null); }
+    public static Tokenizer parser (byte[] src, int off, int lim) { return parser(src, off, lim, null); }
+    public static Tokenizer parser (byte[] src, int off, int lim, Options opt) { return new Tokenizer(src, off, lim, opt); }
 
-    private Parser (byte[] src, int off, int lim, Options opt) {
-        this.ps = new ParseState(src, off, lim);
+    private Tokenizer(byte[] src, int off, int lim, Options opt) {
+        this.ps = new TokenizerState(src, off, lim);
         this.opt = opt == null ? new Options() : opt;
     }
 
@@ -195,7 +195,7 @@ public class Parser {
             return ps.tok = 0;
         }
         ps.koff = ps.klim = ps.voff = ps.vlim;
-        var pos1 = ps.pos;
+        int pos1 = ps.pos;
         while (ps.vlim < ps.lim) {
             ps.voff = ps.vlim;
             ps.tok = ps.src[ps.vlim++];
@@ -288,17 +288,17 @@ public class Parser {
     static Integer pop (List<Integer> list) { int len = list.size(); return len == 0 ? 0 : list.remove(len - 1); }
     static Integer last (List<Integer> list) { int len = list.size(); return len == 0 ? 0 : list.get(len - 1); }
 
-    int handle_unexp (ParseState ps, Options opt) {
+    int handle_unexp (TokenizerState ps, Options opt) {
         if (ps.vlim < 0) { ps.vlim = -ps.vlim; }
         ps.ecode = UNEXPECTED;
         return end_src(ps, opt);
     }
 
-    int handle_neg (ParseState ps, Options opt) {
+    int handle_neg (TokenizerState ps, Options opt) {
         ps.vlim = -ps.vlim;
         if (ps.vlim >= ps.lim) {
             ps.ecode =
-                ps.tok == ParseState.DEC && (CMAP[ps.src[ps.vlim - 1]] & DECIMAL_END) != 0
+                ps.tok == TokenizerState.DEC && (CMAP[ps.src[ps.vlim - 1]] & DECIMAL_END) != 0
                     ? TRUNC_DEC
                     : TRUNCATED;
         } else {
@@ -308,7 +308,7 @@ public class Parser {
         return end_src(ps, opt);
     }
 
-    int end_src (ParseState ps, Options opt) {
+    int end_src (TokenizerState ps, Options opt) {
         switch (ps.ecode) {
             case 0:
                 if (ps.pos == O_AK || ps.pos == O_BV) {
@@ -332,7 +332,7 @@ public class Parser {
 
     void err (String msg) {
         String ctx = "(line " + (ps.line + 1) + ", col " + (ps.soff + ps.voff - ps.lineoff) + ", tokstr " + ps.tokstr(true) + ")";
-        throw new ParseException(ps, msg + ": " + ctx);
+        throw new TokenizerException(ps, msg + ": " + ctx);
     }
 
     void checke () {
@@ -341,7 +341,7 @@ public class Parser {
     }
 
     interface ErrHandler {
-        void err(ParseState ps);
+        void err(TokenizerState ps);
     }
     static class Options {
         ErrHandler ehandler;

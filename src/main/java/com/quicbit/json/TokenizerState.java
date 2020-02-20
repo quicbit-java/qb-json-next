@@ -1,18 +1,15 @@
-package com.quicbit.json.next;
+package com.quicbit.json;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
-
-import static com.quicbit.json.next.Parser.TRUNCATED;
-import static com.quicbit.json.next.Parser.TRUNC_DEC;
 
 //
 // ParseState functions are for convenience and are NOT highly optimized like the Parser.  ParseState methods
 // make working with raw buffers a bit simpler.  ParseState does not provide thorough checks on very
 // large numbers etc.
 //
-public class ParseState {
+public class TokenizerState {
     // values for ps.tok(en).  All but string and decimal are represented by the first ascii byte encountered
     static final int ARR = 91;        // [    array start
     static final int ARR_END = 93;    // ]    array end
@@ -34,13 +31,13 @@ public class ParseState {
     int voff;
     int vlim;
     int tok;
-    int pos = Parser.A_BF;
+    int pos = Tokenizer.A_BF;
     int ecode;
     int vcount;
     int lineoff;
     int line = 1;
 
-    public ParseState(byte[] src, int off, int lim) {
+    public TokenizerState(byte[] src, int off, int lim) {
         this.src = src;
         koff = klim = voff = vlim = soff = off;
         this.lim = src == null ? 0 : Math.min(lim, src.length);
@@ -64,7 +61,7 @@ public class ParseState {
         }
     }
     public Object val() {
-        if (ecode == TRUNCATED || ecode == TRUNC_DEC) {
+        if (ecode == Tokenizer.TRUNCATED || ecode == Tokenizer.TRUNC_DEC) {
             return null;
         }
         if (vlim <= voff) {
@@ -113,10 +110,10 @@ public class ParseState {
     }
 
     static int arr_cmp (byte[] a, int aoff, int alim, byte[] b, int boff, int blim) {
-        var len_a = alim - aoff;
-        var len_b = blim - boff;
-        var lim = aoff + (Math.min(len_a, len_b));
-        var adj = aoff - boff;
+        int len_a = alim - aoff;
+        int len_b = blim - boff;
+        int lim = aoff + (Math.min(len_a, len_b));
+        int adj = aoff - boff;
         while (aoff < lim) {
             if (a[aoff] != b[aoff - adj]) {
                 return a[aoff] > b[aoff - adj] ? 1 : -1;
@@ -148,15 +145,15 @@ public class ParseState {
     public String tokstr (boolean detail) {
         String keystr = key(false);
         keystr = keystr == null ? "" : "k" + (klim - koff) + '@' + koff + ':';
-        String vlen = (vlim == voff || (Parser.CMAP[tok] & Parser.NO_LEN_TOKENS) != 0) ? "" : (vlim - voff) + "";
+        String vlen = (vlim == voff || (Tokenizer.CMAP[tok] & Tokenizer.NO_LEN_TOKENS) != 0) ? "" : (vlim - voff) + "";
 
-        var tchar = tok == 0 ? "!" : Character.toString(tok);
-        var ret = keystr + tchar + vlen + '@' + voff;
+        String tchar = tok == 0 ? "!" : String.valueOf((char) tok);
+        String ret = keystr + tchar + vlen + '@' + voff;
         if (ecode != 0) {
-            ret += ':' + Character.toString(ecode);
+            ret += ':' + String.valueOf((char) ecode);
         }
         if (detail) {
-            ret += ':' + Parser.posname(pos);
+            ret += ':' + Tokenizer.posname(pos);
             if (stack.size() > 0) {
                 ret += ':' + stack.stream().map(Character::toString).collect(Collectors.joining(""));
             }
@@ -174,7 +171,7 @@ public class ParseState {
         jw.key("val").val(val());
         jw.key("line").val(line);
         jw.key("col").val(this.soff + this.vlim - this.lineoff);
-        jw.key("pos").val(Parser.posname(pos));
+        jw.key("pos").val(Tokenizer.posname(pos));
         jw.objend();
         return jw.toString();
     }
